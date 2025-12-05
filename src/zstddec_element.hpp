@@ -2,22 +2,26 @@
 
 #include <gst/gst.h>
 
+#include <cstdint>
+#include <memory>
+#include <vector>
+
+#include "decompressor_factory.hpp"
+
 G_BEGIN_DECLS
 
 #define GST_TYPE_ZSTDDEC (gst_zstddec_get_type())
 
-/*
- * Declare a final (non-derivable) element type that inherits from GstElement.
- * The GObject type will be GstZstdDec and the factory name will be "zstddec".
- */
 G_DECLARE_FINAL_TYPE(GstZstdDec, gst_zstddec, GST, ZSTDDEC, GstElement)
 
 G_END_DECLS
 
 /*
  * Instance and class structures.
- * For now we only define the pads; later we will extend this with
- * decompression-related state (buffers, factory, etc).
+ * Now we add internal C++ state:
+ *  - sinkpad/srcpad: GStreamer pads
+ *  - input_data: accumulated compressed bytes
+ *  - dec: decompressor selected by the factory (zstd/gzip/bzip2)
  */
 
 struct _GstZstdDec {
@@ -25,6 +29,9 @@ struct _GstZstdDec {
 
     GstPad *sinkpad;
     GstPad *srcpad;
+
+    std::vector<std::uint8_t> input_data;
+    std::unique_ptr<Decompressor> dec;
 };
 
 struct _GstZstdDecClass {

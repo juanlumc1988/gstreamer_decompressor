@@ -3,12 +3,13 @@
 srcs = [
   'plugin.cpp',
   'zstddec_element.cpp',
+  'decompressor_factory.cpp',
 ]
 
 libgstzstddec = shared_library(
-  'gstzstddec',          # el nombre real del .so: libgstzstddec.so
+  'gstzstddec',          # name of the library: libgstzstddec.so
   srcs,
-  dependencies: deps,    # viene del meson.build raíz
+  dependencies: deps,    # inherits from root meson.build
   install: true,
   install_dir: join_paths(get_option('libdir'), 'gstreamer-1.0')
 )

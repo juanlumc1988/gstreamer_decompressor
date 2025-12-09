@@ -22,6 +22,7 @@ jobs:
             meson \
             ninja-build \
             pkg-config \
+            libunwind-dev \
             libgstreamer1.0-dev \
             gstreamer1.0-tools \
             libzstd-dev \

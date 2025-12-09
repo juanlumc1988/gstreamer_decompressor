@@ -2,169 +2,151 @@
 
 ## 1. Overview
 
-The `zstddec` plugin is a GStreamer element whose responsibility is to
-**decompress compressed byte streams** and output a plain, uncompressed
-byte stream.
+The `zstddec` plugin is a GStreamer element responsible for **decompressing compressed byte streams** and outputting a raw, uncompressed stream.
 
 Supported formats:
 
-- Zstandard (zstd)
-- gzip
-- bzip2
+- **Zstandard (.zst)**
+- **gzip (.gz)**
+- **bzip2 (.bz2)**
 
 The element exposes:
 
-- **One sink pad**: receives compressed data.
-- **One src pad**: produces decompressed data.
+- **One sink pad**: receives compressed data.  
+- **One src pad**: outputs decompressed data.
 
-Typical usage:
+It is designed primarily for file-based pipelines, where the stream ends with EOS.
+
+Example baseline usage:
 
 ```bash
 gst-launch-1.0 filesrc location=file.txt.zst ! zstddec ! filesink location=file.txt
 ```
 
-This pipeline is expected to produce the same output as:
-
-```bash
-zstd -q -d file.txt.zst -o file.txt
-```
+---
 
 ## 2. Role in a GStreamer Pipeline
 
-A typical pipeline looks like this:
+A typical pipeline:
 
 ```
 filesrc -> zstddec -> filesink
 ```
 
-- `filesrc` reads a compressed file and pushes it downstream.
-- `zstddec`:
-  - accumulates compressed data,
-  - detects format on EOS,
-  - decompresses using the correct backend,
-  - outputs a single uncompressed buffer.
-- `filesink` writes the raw output.
+- `filesrc`: Reads a compressed file and pushes `GstBuffer`s downstream.
+- `zstddec`:  
+  - Accumulates incoming compressed data.  
+  - Detects compression type on EOS.  
+  - Decompresses using the correct backend.  
+  - Pushes a single buffer of uncompressed data.  
+- `filesink`: Writes output to disk.
 
-## 3. Main Components
+The element is stateless between streams and resets fully after EOS.
 
-### 3.1 GStreamer Element: `GstZstdDec`
+---
 
-Defined in:
+## 3. Internal Architecture
+
+### 3.1 `GstZstdDec` Element
+
+Located in:
 
 - `zstddec_element.hpp`
 - `zstddec_element.cpp`
 
 Responsibilities:
 
-- Defines sink/src pads.
-- Receives and stores incoming compressed data.
-- On EOS, uses a `Decompressor` to decompress.
-- Pushes a raw `GstBuffer` downstream.
+- Defines sink and src pad templates.
+- Buffers incoming compressed data.
+- On EOS:
+  - Detects the format.
+  - Instantiates the correct decompressor backend.
+  - Produces a decompressed buffer and pushes it downstream.
 
 ### 3.2 `Decompressor` Interface
 
-Defines a uniform contract:
+Located in:
+
+- `decompressor.hpp`
+
+Defines:
 
 ```cpp
 virtual bool decompress(const std::vector<uint8_t>& input,
                         std::vector<uint8_t>& output) = 0;
 ```
 
-### 3.3 Concrete Implementations
+Why an interface?
 
-- `ZstdDecompressor`
-- `GzipDecompressor`
-- `Bzip2Decompressor`
+- Allows replacing decompression algorithms without touching the GStreamer layer.
+- Allows isolated Google Test unit tests.
 
-Each wraps the corresponding system library: `libzstd`, `zlib`, `libbz2`.
+### 3.3 Concrete Decompressors
+
+Each stored in its own header:
+
+- `decompressor_zstd.hpp`
+- `decompressor_gzip.hpp`
+- `decompressor_bzip2.hpp`
+
+Libraries used:
+
+- Zstd → `libzstd`
+- gzip → `zlib`
+- bzip2 → `libbz2`
+
+Each provides:
+- one-shot buffer-to-buffer decompression,
+- safe return semantics (`true`/`false`, not exceptions),
+- internal buffer resizing if required.
 
 ### 3.4 `DecompressorFactory`
 
-Reads magic bytes to choose the correct decoder.
+Located in:
 
-Rules:
+- `decompressor_factory.hpp`
+- `decompressor_factory.cpp`
 
-- gzip → `1F 8B`
-- bzip2 → `42 5A 68` (“BZh”)
-- otherwise → zstd
+Purpose:
 
-## 4. Internal Data Flow
+- Read magic bytes and choose backend:
+  - gzip → `1F 8B`
+  - bzip2 → `42 5A 68` ("BZh")
+  - else → assume Zstandard
 
-1. **Chain function** accumulates data.
-2. **EOS event** triggers:
-   - auto-detection,
-   - decompression,
-   - pushing final buffer.
-
-## 5. Plugin Integration
-
-The plugin is registered using `GST_PLUGIN_DEFINE` in `plugin.cpp`.
-
-Install locally:
-
-```bash
-mkdir -p ~/.local/lib/gstreamer-1.0
-cp builddir/src/libgstzstddec.so ~/.local/lib/gstreamer-1.0/
-export GST_PLUGIN_PATH="$HOME/.local/lib/gstreamer-1.0:$GST_PLUGIN_PATH"
-```
-
-Verify:
-
-```bash
-gst-inspect-1.0 zstddec
-```
+This isolates all detection logic outside the GStreamer element.
 
 ---
 
-## 6. Usage Examples
+## 4. Data Flow
 
-The `zstddec` element automatically detects format, so pipelines are identical.
+1. **Receive buffer (Chain function)**  
+   - Map the buffer.  
+   - Append bytes to internal `input_data`.  
+   - Unmap and unref.  
 
-### 6.1 Zstandard (.zst)
+2. **Receive EOS (Sink event)**  
+   - If no data: propagate EOS.  
+   - Else:
+     - Detect format.  
+     - Create decompressor.  
+     - Decompress `input_data`.  
+     - Allocate output `GstBuffer`.  
+     - Push downstream.  
+     - Send EOS.  
 
-```bash
-gst-launch-1.0     filesrc location=file.txt.zst !     zstddec !     filesink location=out_zstd.txt
-```
-
-Validate:
-
-```bash
-zstd -d file.txt.zst -o ref_zstd.txt
-diff -u ref_zstd.txt out_zstd.txt
-```
-
----
-
-### 6.2 gzip (.gz)
-
-```bash
-gst-launch-1.0     filesrc location=file.txt.gz !     zstddec !     filesink location=out_gzip.txt
-```
-
-Validate:
-
-```bash
-gzip -dc file.txt.gz > ref_gzip.txt
-diff -u ref_gzip.txt out_gzip.txt
-```
+3. **Reset internal state for next stream**
 
 ---
 
-### 6.3 bzip2 (.bz2)
+## 5. Summary
 
-```bash
-gst-launch-1.0     filesrc location=file.txt.bz2 !     zstddec !     filesink location=out_bzip2.txt
-```
+This architecture:
 
-Validate:
+- cleanly separates GStreamer integration from decompression logic,
+- supports multiple formats transparently,
+- allows full unit testing of decompression behavior,
+- integrates easily into any GStreamer pipeline,
+- supports reproducible installation and verification steps.
 
-```bash
-bzip2 -dc file.txt.bz2 > ref_bzip2.txt
-diff -u ref_bzip2.txt out_bzip2.txt
-```
-
----
-
-These examples demonstrate how the plugin integrates seamlessly into
-GStreamer pipelines while supporting three compression formats without
-changing pipeline structure.
+The project is designed to be extendable, testable, and robust enough for real-world usage scenarios.

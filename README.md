@@ -68,21 +68,26 @@ zstddec
 meson setup builddir
 ```
 
-### 2. Compile
+---
+
+## 2. Installing the Plugin
+
+Before testing any pipeline, install the plugin into a directory scanned by GStreamer.
+
+### **2.1 Build**
 
 ```bash
+meson setup builddir
 meson compile -C builddir
 ```
 
-This produces:
+The plugin will be generated at:
 
 ```
 builddir/src/libgstzstddec.so
 ```
 
----
-
-## Installing the Plugin Locally
+### **2.2 Install locally**
 
 ```bash
 mkdir -p ~/.local/lib/gstreamer-1.0
@@ -90,35 +95,109 @@ cp builddir/src/libgstzstddec.so ~/.local/lib/gstreamer-1.0/
 export GST_PLUGIN_PATH="$HOME/.local/lib/gstreamer-1.0:${GST_PLUGIN_PATH:-}"
 ```
 
-Verify:
+### **2.3 Verify installation**
 
 ```bash
 gst-inspect-1.0 zstddec
 ```
 
----
-
-## Usage Examples
-
-### Zstandard
-
-```bash
-gst-launch-1.0 filesrc location=file.txt.zst ! zstddec ! filesink location=out.txt
-```
-
-### gzip
-
-```bash
-gst-launch-1.0 filesrc location=file.txt.gz ! zstddec ! filesink location=out.txt
-```
-
-### bzip2
-
-```bash
-gst-launch-1.0 filesrc location=file.txt.bz2 ! zstddec ! filesink location=out.txt
-```
+Expected output: plugin metadata and factory description.
 
 ---
+
+## 3. Preparing Test Files
+
+To fully reproduce and validate plugin behavior, generate compressed versions of a sample file.
+
+### Create a sample input file
+
+```bash
+echo "Sample test text for zstd, gzip and bzip2." > file.txt
+```
+
+### Create Zstandard compressed file
+
+```bash
+zstd -q file.txt -o file.txt.zst
+```
+
+### Create gzip compressed file
+
+```bash
+gzip -c file.txt > file.txt.gz
+```
+
+### Create bzip2 compressed file
+
+```bash
+bzip2 -c file.txt > file.txt.bz2
+```
+
+Verify:
+
+```bash
+ls file.txt*
+```
+
+You should see:
+
+```
+file.txt
+file.txt.zst
+file.txt.gz
+file.txt.bz2
+```
+
+---
+
+## 4. Usage Examples (Complete Pipelines)
+
+The `zstddec` element **automatically detects** the input format, so the pipeline structure never changes.
+
+---
+
+### **4.1 Zstandard (.zst)**
+
+```bash
+gst-launch-1.0     filesrc location=file.txt.zst !     zstddec !     filesink location=out_zstd.txt
+```
+
+Validation:
+
+```bash
+zstd -d file.txt.zst -o ref_zstd.txt
+diff -u ref_zstd.txt out_zstd.txt
+```
+
+---
+
+### **4.2 gzip (.gz)**
+
+```bash
+gst-launch-1.0     filesrc location=file.txt.gz !     zstddec !     filesink location=out_gzip.txt
+```
+
+Validation:
+
+```bash
+gzip -dc file.txt.gz > ref_gzip.txt
+diff -u ref_gzip.txt out_gzip.txt
+```
+
+---
+
+### **4.3 bzip2 (.bz2)**
+
+```bash
+gst-launch-1.0     filesrc location=file.txt.bz2 !     zstddec !     filesink location=out_bzip2.txt
+```
+
+Validation:
+
+```bash
+bzip2 -dc file.txt.bz2 > ref_bzip2.txt
+diff -u ref_bzip2.txt out_bzip2.txt
+```
 
 ## Running Unit Tests
 
@@ -139,6 +218,7 @@ sudo apt install doxygen
 Generate:
 
 ```bash
+cd docs/
 doxygen Doxyfile
 ```
 
@@ -158,10 +238,6 @@ Workflow file:
 .github/workflows/ci.yml
 ```
 
-Documentation:
-
-- `docs/GHA_SETUP.md`
-
 ---
 
 ## Additional Documentation
@@ -175,13 +251,7 @@ Documentation:
 
 ---
 
-## License
-
-MIT License.
-
----
-
 ## Author
 
-Your Name  
-Your Email  
+Juan Luis Montes Calvo  
+juanluismontescalvo@icloud.com

@@ -43,3 +43,6 @@
 /build
 *.txt
 /docs/html/
+*.bz2
+*.gz
+*.zst

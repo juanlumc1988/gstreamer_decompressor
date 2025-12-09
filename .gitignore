@@ -39,3 +39,10 @@
 
 # debug information files
 *.dwo
+
+/build
+*.txt
+/docs/html/
+*.bz2
+*.gz
+*.zst

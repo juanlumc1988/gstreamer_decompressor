@@ -1,0 +1,50 @@
+name: CI - zstddec plugin
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            meson \
+            ninja-build \
+            pkg-config \
+            libgstreamer1.0-dev \
+            gstreamer1.0-tools \
+            libzstd-dev \
+            zlib1g-dev \
+            libbz2-dev \
+            libgtest-dev \
+            cmake
+
+      - name: Build and install GoogleTest
+        run: |
+          cd /usr/src/googletest
+          sudo cmake -S . -B build
+          sudo cmake --build build
+          sudo cmake --install build
+
+      - name: Configure Meson
+        run: |
+          meson setup builddir
+
+      - name: Build
+        run: |
+          meson compile -C builddir
+
+      - name: Run unit tests
+        run: |
+          meson test -C builddir --print-errorlogs

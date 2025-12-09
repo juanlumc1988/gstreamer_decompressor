@@ -10,14 +10,12 @@
 /*
  * Helper to safely check the first N bytes of the input.
  */
-static inline std::uint8_t byte_or_zero(const std::vector<std::uint8_t>& v,
-                                        std::size_t idx)
+static inline std::uint8_t byte_or_zero(const std::vector<std::uint8_t>& v, std::size_t idx)
 {
     return (idx < v.size()) ? v[idx] : 0;
 }
 
-std::unique_ptr<Decompressor>
-DecompressorFactory::create(const std::vector<std::uint8_t>& input)
+std::unique_ptr<Decompressor> DecompressorFactory::create(const std::vector<std::uint8_t>& input)
 {
     const std::uint8_t b0 = byte_or_zero(input, 0);
     const std::uint8_t b1 = byte_or_zero(input, 1);

@@ -17,6 +17,5 @@ public:
      *  - bzip2: 'B' 'Z' 'h'
      *  - default: zstd
      */
-    static std::unique_ptr<Decompressor>
-    create(const std::vector<std::uint8_t>& input);
+    static std::unique_ptr<Decompressor> create(const std::vector<std::uint8_t>& input);
 };

@@ -1,7 +1,7 @@
 #include "zstddec_element.hpp"
 
 #include <gst/gst.h>
-#include <cstring>  // for memcpy
+#include <cstring>
 
 G_DEFINE_TYPE(GstZstdDec, gst_zstddec, GST_TYPE_ELEMENT)
 
@@ -19,7 +19,7 @@ static void gst_zstddec_class_init(GstZstdDecClass *klass)
         "Zstd/gzip/bzip2 decoder",
         "Decoder/Filter",
         "Decoder for Zstandard, gzip and bzip2 compressed streams",
-        "Your Name <you@example.com>");
+        "Juanlu <juanluismontescalvo@icloud.com>");
 
     /* We operate on raw bytes; caps are kept generic (ANY -> ANY) */
     GstCaps *any_caps = gst_caps_new_any();

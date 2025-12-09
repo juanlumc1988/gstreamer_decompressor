@@ -1,27 +1,36 @@
 project(
   'zstddec',
-  ['c', 'cpp'],
-  version: '0.1.0',
-  default_options: [
+  'cpp',
+  version : '0.1.0',
+  default_options : [
     'cpp_std=c++20',
-    'warning_level=3'
+    'warning_level=3',
   ]
 )
 
-cc = meson.get_compiler('c')
+cc = meson.get_compiler('cpp')
 
-# Main deps using pkg-config
+zstd_dep = dependency('libzstd')
+gst_dep  = dependency('gstreamer-1.0')
+zlib_dep = dependency('zlib')
 
-zstd_dep       = dependency('libzstd', required: true)
-gstreamer_dep  = dependency('gstreamer-1.0', required: true)
-zlib_dep       = dependency('zlib', required: true)    
-bzip2_dep = cc.find_library('bz2', required: true)
+# Intentar primero con pkg-config/cmake
+bz2_dep = dependency('bzip2', required : false)
+
+# Si falla, buscar la librería libbz2 directamente
+if not bz2_dep.found()
+  bz2_dep = cc.find_library('bz2', required : true)
+endif
 
 deps = [
-  gstreamer_dep,
   zstd_dep,
+  gst_dep,
   zlib_dep,
-  bzip2_dep,
+  bz2_dep,
 ]
 
 subdir('src')
+
+if get_option('tests')
+  subdir('tests')
+endif

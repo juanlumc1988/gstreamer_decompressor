@@ -57,6 +57,12 @@ sudo apt install -y \
   doxygen \
   graphviz
 
+echo "[INFO] Installing and compiling GoogleTest"
+sudo apt install -y libgtest-dev cmake
+sudo cmake -S /usr/src/googletest -B /usr/src/googletest/build
+sudo cmake --build /usr/src/googletest/build
+sudo cmake --install /usr/src/googletest/build  
+
 echo
 echo "[INFO] Finished initial setup."
 echo "[INFO] You can now clone your repository and run:"

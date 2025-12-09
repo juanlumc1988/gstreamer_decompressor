@@ -4,12 +4,11 @@
 #include <cstring>
 
 /*
- * Bzip2Decompressor: one-shot decompression for bzip2 streams.
+ * Bzip2Decompressor: decompression for bzip2 streams.
  */
 class Bzip2Decompressor : public Decompressor {
 public:
-    bool decompress(const std::vector<std::uint8_t>& input,
-                    std::vector<std::uint8_t>& output) override
+    bool decompress(const std::vector<std::uint8_t>& input, std::vector<std::uint8_t>& output) override
     {
         if (input.empty()) {
             output.clear();

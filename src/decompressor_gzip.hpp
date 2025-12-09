@@ -5,12 +5,11 @@
 #include <stdexcept>
 
 /*
- * GzipDecompressor: one-shot decompression for gzip streams using zlib.
+ * GzipDecompressor: decompression for gzip streams using zlib.
  */
 class GzipDecompressor : public Decompressor {
 public:
-    bool decompress(const std::vector<std::uint8_t>& input,
-                    std::vector<std::uint8_t>& output) override
+    bool decompress(const std::vector<std::uint8_t>& input, std::vector<std::uint8_t>& output) override
     {
         if (input.empty()) {
             output.clear();

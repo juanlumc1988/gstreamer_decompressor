@@ -62,6 +62,29 @@ zstddec
 
 ## Build Instructions (Meson + Ninja)
 
+## 0. Environment Setup (Required)
+
+Before building the project, you must install all required system dependencies
+(GStreamer development libraries, Meson, Ninja, compression libraries, GoogleTest, etc.).
+
+This repository provides a setup script that prepares a full Ubuntu/WSL environment
+in a safe and repeatable way.
+
+### Run the initial setup script
+
+```bash
+cd scripts/
+./initial_setup_ubuntu.sh
+```
+
+### If the script is not executable
+```bash
+chmod +x scripts/initial_setup_ubuntu.sh
+./scripts/initial_setup_ubuntu.sh
+```
+
+---
+
 ### 1. Configure the build directory
 
 ```bash

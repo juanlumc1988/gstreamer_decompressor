@@ -46,3 +46,4 @@
 *.bz2
 *.gz
 *.zst
+*:Zone.Identifier

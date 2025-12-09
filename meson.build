@@ -34,3 +34,17 @@ subdir('src')
 if get_option('tests')
   subdir('tests')
 endif
+
+doxygen = find_program('doxygen', required: false)
+
+if doxygen.found()
+  doc_conf = files('docs/Doxyfile')
+
+  custom_target(
+    'doc',
+    input: doc_conf,
+    output: 'html',
+    command: [doxygen, '@INPUT@'],
+    build_by_default: false
+  )
+endif

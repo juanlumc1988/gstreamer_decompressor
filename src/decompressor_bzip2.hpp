@@ -3,11 +3,22 @@
 #include <bzlib.h>
 #include <cstring>
 
-/*
- * Bzip2Decompressor: decompression for bzip2 streams.
- */
+/// @brief bzip2 decompressor implementation using libbz2.
+///
+/// This class wraps BZ2_bzBuffToBuffDecompress() to implement a one-shot
+/// decompression API.
+///
+/// Strategy:
+///  - Start with an output buffer sized as a heuristic multiple of the
+///    compressed size.
+///  - Call BZ2_bzBuffToBuffDecompress().
+///  - If the result is BZ_OUTBUFF_FULL, double the buffer size and retry once.
+///  - Treat any result other than BZ_OK as an error.
+///
+/// Empty input is treated as a successful no-op and produces an empty output.
 class Bzip2Decompressor : public Decompressor {
 public:
+    /// @copydoc Decompressor::decompress()
     bool decompress(const std::vector<std::uint8_t>& input, std::vector<std::uint8_t>& output) override
     {
         if (input.empty()) {

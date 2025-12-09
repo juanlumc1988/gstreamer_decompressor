@@ -3,11 +3,21 @@
 #include <zstd.h>
 #include <cstring>
 
-/*
- * ZstdDecompressor: decompressor for Zstandard data.
- */
+/// @brief Zstandard decompressor implementation.
+///
+/// This class uses the libzstd API to decompress a complete Zstandard frame.
+/// It first tries to query the uncompressed size from the frame header using
+/// ZSTD_getFrameContentSize(). If that fails (unknown or error), it falls
+/// back to a heuristic based on the compressed size.
+///
+/// Error handling strategy:
+///  - If the input buffer is empty, the method succeeds and clears the output.
+///  - If libzstd reports an error, the method clears the output and returns false.
+///  - On success, the output vector is resized to the exact number of bytes
+///    produced by ZSTD_decompress().
 class ZstdDecompressor : public Decompressor {
 public:
+    /// @copydoc Decompressor::decompress()
     bool decompress(const std::vector<std::uint8_t>& input, std::vector<std::uint8_t>& output) override
     {
         if (input.empty()) {

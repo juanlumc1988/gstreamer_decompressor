@@ -9,7 +9,14 @@ G_DEFINE_TYPE(GstZstdDec, gst_zstddec, GST_TYPE_ELEMENT)
 static GstFlowReturn gst_zstddec_chain(GstPad *pad, GstObject *parent, GstBuffer *buffer);
 static gboolean gst_zstddec_sink_event(GstPad *pad, GstObject *parent, GstEvent *event);
 
-/* Class initialization: metadata and pad templates */
+/**
+ * @brief Class initialization hook for GstZstdDec.
+ *
+ * This function:
+ *  - Sets the element metadata (name, classification, description, author).
+ *  - Creates and configures the static pad templates for sink and src pads.
+ *  - Installs the chain function and the event handler for the sink pad.
+ */ 
 static void gst_zstddec_class_init(GstZstdDecClass *klass)
 {
     GstElementClass *element_class = GST_ELEMENT_CLASS(klass);
@@ -42,7 +49,12 @@ static void gst_zstddec_class_init(GstZstdDecClass *klass)
     gst_caps_unref(any_caps);
 }
 
-/* Instance initialization: create pads and attach functions */
+/**
+ * @brief Instance initialization hook for GstZstdDec.
+ *
+ * This function creates the sink and src pads from their templates and
+ * initializes the internal state (empty input buffer and null decompressor).
+ */
 static void gst_zstddec_init(GstZstdDec *self)
 {
     GstElementClass *klass = GST_ELEMENT_CLASS(G_OBJECT_GET_CLASS(self));
@@ -65,7 +77,21 @@ static void gst_zstddec_init(GstZstdDec *self)
     self->dec.reset();
 }
 
-/* Chain function: accumulate all incoming compressed data */
+/**
+ * @brief Chain function for the sink pad.
+ *
+ * This function is called for each incoming buffer on the sink pad.
+ * It maps the buffer in read mode, appends its content to the internal
+ * input_data vector, and then unrefs the buffer.
+ *
+ * No decompression is performed here. The actual decompression is
+ * triggered on EOS in gst_zstddec_sink_event().
+ *
+ * @param pad    Sink pad receiving the buffer (unused).
+ * @param parent Pointer to the GstZstdDec instance.
+ * @param buffer Buffer containing a fragment of the compressed stream.
+ * @return GST_FLOW_OK on success, GST_FLOW_ERROR if the buffer cannot be mapped.
+ */
 static GstFlowReturn gst_zstddec_chain(GstPad *pad, GstObject *parent, GstBuffer *buffer)
 {
     (void)pad; // avoid unused parameter warning
@@ -93,7 +119,25 @@ static GstFlowReturn gst_zstddec_chain(GstPad *pad, GstObject *parent, GstBuffer
     return GST_FLOW_OK;
 }
 
-/* Handle events on sink pad, particularly EOS to trigger decompression */
+/**
+ * @brief Event handler for the sink pad.
+ *
+ * This handler is particularly interested in EOS events. When EOS is received:
+ *  - If no data was accumulated, the EOS is simply forwarded downstream.
+ *  - Otherwise, the element:
+ *    - Lazily creates a Decompressor instance via DecompressorFactory,
+ *      based on the magic bytes found in input_data.
+ *    - Invokes decompress() to obtain the uncompressed payload.
+ *    - Pushes a single output buffer with the decompressed data on the src pad.
+ *    - Forwards the EOS event downstream and resets its internal state.
+ *
+ * All other events are forwarded to the default pad event handler.
+ *
+ * @param pad    Sink pad receiving the event.
+ * @param parent Pointer to the GstZstdDec instance.
+ * @param event  The event being handled.
+ * @return TRUE if the event was handled successfully, FALSE otherwise.
+ */
 static gboolean gst_zstddec_sink_event(GstPad *pad, GstObject *parent, GstEvent *event)
 {
     GstZstdDec *self = GST_ZSTDDEC(parent);

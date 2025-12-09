@@ -8,8 +8,14 @@
 #define PACKAGE "zstddec"
 #endif
 
-/* Plugin initialization function.
- * This is called by GStreamer when the plugin is loaded.
+/**
+ * @brief Plugin init function called by GStreamer at plugin load time.
+ *
+ * This function registers the zstddec element type in the GStreamer registry
+ * and associates it with the element factory name "zstddec".
+ *
+ * @param plugin Pointer to the GstPlugin being initialized.
+ * @return TRUE if registration succeeds, FALSE otherwise.
  */
 static gboolean plugin_init(GstPlugin *plugin)
 {

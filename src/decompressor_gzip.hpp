@@ -4,11 +4,23 @@
 #include <cstring>
 #include <stdexcept>
 
-/*
- * GzipDecompressor: decompression for gzip streams using zlib.
- */
+/// @brief Gzip decompressor implementation using zlib.
+///
+/// This class uses zlib's inflate() API in gzip mode (inflateInit2 with
+/// 16 + MAX_WBITS) to decompress a complete gzip stream in a single call.
+///
+/// Strategy:
+///  - Start with an output buffer sized as a heuristic multiple of the
+///    compressed size.
+///  - Call inflate() with Z_FINISH.
+///  - If the buffer is too small (Z_BUF_ERROR or Z_OK without Z_STREAM_END),
+///    reallocate a larger buffer and retry once from scratch.
+///  - Treat any other inflate() return code as an unrecoverable error.
+///
+/// Empty input is treated as a successful no-op and produces an empty output.
 class GzipDecompressor : public Decompressor {
 public:
+    /// @copydoc Decompressor::decompress()
     bool decompress(const std::vector<std::uint8_t>& input, std::vector<std::uint8_t>& output) override
     {
         if (input.empty()) {

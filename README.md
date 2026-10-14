@@ -53,7 +53,7 @@ zstddec
 │   ├── TROUBLESHOOTING.md
 │   └── GHA_SETUP.md
 │
-├── scripts/
+├── setup/
 │   └── setup-gstreamer.sh
 │
 ├── .vscode/
@@ -84,13 +84,13 @@ in a safe and repeatable way.
 From the repository root:
 
 ```bash
-./scripts/setup-gstreamer.sh
+./setup/setup-gstreamer.sh
 ```
 
 ### If the script is not executable
 ```bash
-chmod +x scripts/setup-gstreamer.sh
-./scripts/setup-gstreamer.sh
+chmod +x setup/setup-gstreamer.sh
+./setup/setup-gstreamer.sh
 ```
 
 ---

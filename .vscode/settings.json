@@ -1,0 +1,9 @@
+{
+  "mesonbuild.modifySettings": false,
+  "C_Cpp.default.compileCommands": "${workspaceFolder}/builddir/compile_commands.json",
+  "C_Cpp.default.cppStandard": "c++20",
+  "terminal.integrated.env.linux": {
+    "GST_PLUGIN_PATH": "${workspaceFolder}/builddir/src"
+  },
+  "files.eol": "\n"
+}

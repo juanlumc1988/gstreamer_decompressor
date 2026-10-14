@@ -53,6 +53,15 @@ zstddec
 │   ├── TROUBLESHOOTING.md
 │   └── GHA_SETUP.md
 │
+├── scripts/
+│   └── setup-gstreamer.sh
+│
+├── .vscode/
+│   ├── extensions.json
+│   ├── settings.json
+│   ├── tasks.json
+│   └── launch.json
+│
 ├── meson.build
 ├── meson_options.txt
 └── README.md
@@ -70,17 +79,18 @@ Before building the project, you must install all required system dependencies
 This repository provides a setup script that prepares a full Ubuntu/WSL environment
 in a safe and repeatable way.
 
-### Run the initial setup script
+### Run the setup script
+
+From the repository root:
 
 ```bash
-cd scripts/
-./initial_setup_ubuntu.sh
+./scripts/setup-gstreamer.sh
 ```
 
 ### If the script is not executable
 ```bash
-chmod +x scripts/initial_setup_ubuntu.sh
-./scripts/initial_setup_ubuntu.sh
+chmod +x scripts/setup-gstreamer.sh
+./scripts/setup-gstreamer.sh
 ```
 
 ---

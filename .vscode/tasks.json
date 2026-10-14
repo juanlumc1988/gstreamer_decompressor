@@ -15,7 +15,7 @@
       "group": { "kind": "build", "isDefault": true },
       "problemMatcher": {
         "base": "$gcc",
-        "fileLocation": ["relative", "${workspaceFolder}/builddir"]
+        "fileLocation": ["autoDetect", "${workspaceFolder}/builddir"]
       }
     },
     {

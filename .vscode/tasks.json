@@ -1,0 +1,51 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "meson: configure (if missing)",
+      "type": "shell",
+      "command": "[ -f builddir/meson-private/coredata.dat ] || meson setup builddir",
+      "problemMatcher": []
+    },
+    {
+      "label": "meson: compile",
+      "type": "shell",
+      "command": "meson compile -C builddir",
+      "dependsOn": ["meson: configure (if missing)"],
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": {
+        "base": "$gcc",
+        "fileLocation": ["autoDetect", "${workspaceFolder}/builddir"]
+      }
+    },
+    {
+      "label": "meson: test",
+      "type": "shell",
+      "command": "meson test -C builddir --print-errorlogs",
+      "dependsOn": ["meson: compile"],
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "meson: test (valgrind)",
+      "type": "shell",
+      "command": "meson test -C builddir --print-errorlogs --wrap='valgrind --leak-check=full --error-exitcode=1'",
+      "dependsOn": ["meson: compile"],
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "sample: generate .zst/.gz/.bz2 files",
+      "type": "shell",
+      "command": "printf 'Sample test text for zstd, gzip and bzip2.\\n' > file.txt && zstd -q -f file.txt -o file.txt.zst && gzip -c file.txt > file.txt.gz && bzip2 -c file.txt > file.txt.bz2",
+      "problemMatcher": []
+    },
+    {
+      "label": "doxygen: generate docs",
+      "type": "shell",
+      "command": "doxygen Doxyfile",
+      "options": { "cwd": "${workspaceFolder}/docs" },
+      "problemMatcher": []
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug unit tests (all)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/builddir/tests/zstddec_tests",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "preLaunchTask": "meson: compile",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ]
+    },
+    {
+      "name": "Debug unit tests (gtest filter)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/builddir/tests/zstddec_tests",
+      "args": ["--gtest_filter=${input:gtestFilter}"],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "preLaunchTask": "meson: compile",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ]
+    },
+    {
+      "name": "Debug plugin (gst-launch-1.0 ! zstddec)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "/usr/bin/gst-launch-1.0",
+      "args": [
+        "filesrc", "location=${input:compressedFile}",
+        "!", "zstddec",
+        "!", "filesink", "location=${input:outputFile}"
+      ],
+      "cwd": "${workspaceFolder}",
+      "environment": [
+        { "name": "GST_PLUGIN_PATH", "value": "${workspaceFolder}/builddir/src" }
+      ],
+      "stopAtEntry": false,
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "preLaunchTask": "meson: compile",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Allow breakpoints in the plugin before its .so is loaded",
+          "text": "-gdb-set breakpoint pending on",
+          "ignoreFailures": true
+        }
+      ]
+    }
+  ],
+  "inputs": [
+    {
+      "id": "gtestFilter",
+      "type": "promptString",
+      "description": "gtest filter (e.g. Gzip*:Bzip2*)",
+      "default": "*"
+    },
+    {
+      "id": "compressedFile",
+      "type": "promptString",
+      "description": "Compressed input file (run task 'sample: generate .zst/.gz/.bz2 files' first)",
+      "default": "file.txt.zst"
+    },
+    {
+      "id": "outputFile",
+      "type": "promptString",
+      "description": "Decompressed output file",
+      "default": "/tmp/zstddec_out.txt"
+    }
+  ]
+}

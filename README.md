@@ -53,6 +53,15 @@ zstddec
 │   ├── TROUBLESHOOTING.md
 │   └── GHA_SETUP.md
 │
+├── setup/
+│   └── setup-gstreamer.sh
+│
+├── .vscode/
+│   ├── extensions.json
+│   ├── settings.json
+│   ├── tasks.json
+│   └── launch.json
+│
 ├── meson.build
 ├── meson_options.txt
 └── README.md
@@ -70,17 +79,18 @@ Before building the project, you must install all required system dependencies
 This repository provides a setup script that prepares a full Ubuntu/WSL environment
 in a safe and repeatable way.
 
-### Run the initial setup script
+### Run the setup script
+
+From the repository root:
 
 ```bash
-cd scripts/
-./initial_setup_ubuntu.sh
+./setup/setup-gstreamer.sh
 ```
 
 ### If the script is not executable
 ```bash
-chmod +x scripts/initial_setup_ubuntu.sh
-./scripts/initial_setup_ubuntu.sh
+chmod +x setup/setup-gstreamer.sh
+./setup/setup-gstreamer.sh
 ```
 
 ---
@@ -250,6 +260,31 @@ Output:
 ```
 docs/doxygen/html/index.html
 ```
+
+---
+
+## Development in VSCode (Windows 10 + WSL2)
+
+The `.vscode/` folder integrates the build, the tests and the debugger with VSCode.
+Everything runs inside WSL2.
+
+1. On Windows, install VSCode and the **WSL** extension (`ms-vscode-remote.remote-wsl`).
+2. Clone the repository **inside the WSL filesystem** (e.g. `~/src`), not under `/mnt/c`,
+   and run the setup script (see section 0).
+3. From the WSL terminal, run `code .` in the repository root. Accept the recommended
+   extensions (C/C++ and Meson) and choose *Install in WSL*. Trust the workspace when asked:
+   the `GST_PLUGIN_PATH` set for the integrated terminal is ignored in untrusted workspaces.
+
+| Action | How |
+|--------|-----|
+| Build | `Ctrl+Shift+B` (task `meson: compile`; runs `meson setup builddir` first if it does not exist) |
+| Run unit tests | *Terminal → Run Task…* → `meson: test` or `meson: test (valgrind)` |
+| Debug unit tests | *Run and Debug* → `Debug unit tests (all)` or `Debug unit tests (gtest filter)` |
+| Debug the plugin | Run the task `sample: generate .zst/.gz/.bz2 files` once, then *Run and Debug* → `Debug plugin (gst-launch-1.0 ! zstddec)` (it asks for the input and output files) |
+| Generate docs | *Terminal → Run Task…* → `doxygen: generate docs` |
+
+The integrated terminal sets `GST_PLUGIN_PATH` to `builddir/src`, so `gst-inspect-1.0 zstddec`
+works there without installing the plugin (see section 2).
 
 ---
 

@@ -76,6 +76,14 @@ Decision:
 
 - Implement decompression in **one-shot mode**, accumulating all compressed
   data until EOS and then decompressing it in a single call.
+- Inside that call, each backend uses the library's incremental API over the
+  in-memory input and writes into an output vector that **doubles when full**.
+  The output size is never estimated: an estimate (a multiple of the compressed
+  size, or the size declared in a header) fails for highly compressible data
+  and for zstd frames that do not declare their size.
+- Concatenated streams (gzip members, bzip2 streams, zstd frames) are
+  decompressed in order. Truncated input and trailing bytes that are not a
+  valid stream are errors.
 
 Rationale:
 
@@ -99,11 +107,14 @@ Principles:
 - On error:
   - clear the output buffer,
   - return `false`,
-  - let the GStreamer element log the error and forward EOS.
+  - let the GStreamer element post an error on the bus and forward EOS.
 
 In the element:
 
-- Errors are reported via GStreamer logging macros (e.g. `GST_ERROR_OBJECT`).
+- A failed decompression is reported with `GST_ELEMENT_ERROR` (domain
+  `GST_STREAM_ERROR`, code `DECODE`), so applications such as `gst-launch-1.0`
+  exit with an error instead of silently producing an empty output.
+  Other conditions are reported via GStreamer logging macros (e.g. `GST_ERROR_OBJECT`).
 - The element always cleans up its internal state (`input_data`, `dec`)
   after EOS, regardless of success or failure of the decompression step.
 

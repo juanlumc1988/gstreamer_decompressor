@@ -128,6 +128,8 @@ static GstFlowReturn gst_zstddec_chain(GstPad *pad, GstObject *parent, GstBuffer
  *    - Lazily creates a Decompressor instance via DecompressorFactory,
  *      based on the magic bytes found in input_data.
  *    - Invokes decompress() to obtain the uncompressed payload.
+ *    - On failure, posts a GST_STREAM_ERROR_DECODE error on the bus, forwards
+ *      EOS and resets its internal state without pushing any data.
  *    - Pushes a single output buffer with the decompressed data on the src pad.
  *    - Forwards the EOS event downstream and resets its internal state.
  *
@@ -159,7 +161,12 @@ static gboolean gst_zstddec_sink_event(GstPad *pad, GstObject *parent, GstEvent 
         bool ok = self->dec && self->dec->decompress(self->input_data, output);
 
         if (!ok) {
-            GST_ERROR_OBJECT(self, "Decompression failed");
+            // Post an error on the bus so the application (e.g. gst-launch-1.0)
+            // sees the failure instead of a silent, empty output.
+            GST_ELEMENT_ERROR(self, STREAM, DECODE,
+                              ("Could not decompress the stream"),
+                              ("Invalid, truncated or unsupported zstd/gzip/bzip2 data (%" G_GSIZE_FORMAT " input bytes)",
+                               static_cast<gsize>(self->input_data.size())));
             // Forward EOS anyway, but no data will be pushed.
             gboolean ret = gst_pad_event_default(pad, parent, event);
             self->input_data.clear();

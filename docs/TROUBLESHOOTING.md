@@ -214,6 +214,30 @@ If the mismatch persists:
 - ensure the plugin has been rebuilt after changes,
 - check the logs for error messages in the decompression path.
 
+### 2.3 `Could not decompress the stream`
+
+Symptom:
+
+```text
+ERROR: from element /GstPipeline:pipeline0/GstZstdDec:zstddec0: Could not decompress the stream
+Additional debug info: ... Invalid, truncated or unsupported zstd/gzip/bzip2 data (N input bytes)
+```
+
+Cause:
+
+- The input is corrupt, truncated, or not zstd/gzip/bzip2 (anything that does not
+  start with the gzip or bzip2 magic bytes is treated as zstd), or it has trailing
+  bytes after the last valid stream.
+
+Diagnostic steps:
+
+```bash
+zstd -t file.zst      # or: gzip -t file.gz / bzip2 -t file.bz2
+```
+
+If the reference tool accepts the file but the element does not, please report it
+(the file, or a minimal one that reproduces it) and the output of `gst-launch-1.0 -v`.
+
 ## 3. CI (GitHub Actions) Issues
 
 ### 3.1 Unmet dependencies when installing `libgstreamer1.0-dev`

@@ -20,7 +20,6 @@ std::unique_ptr<Decompressor> DecompressorFactory::create(const std::vector<std:
     const std::uint8_t b0 = byte_or_zero(input, 0);
     const std::uint8_t b1 = byte_or_zero(input, 1);
     const std::uint8_t b2 = byte_or_zero(input, 2);
-    const std::uint8_t b3 = byte_or_zero(input, 3);
 
     // gzip magic: 0x1F 0x8B
     if (b0 == 0x1f && b1 == 0x8b) {

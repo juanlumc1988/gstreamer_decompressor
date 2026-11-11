@@ -1,21 +1,22 @@
+#pragma once
+
 #include "decompressor.hpp"
 
 #include <zlib.h>
-#include <cstring>
-#include <stdexcept>
+#include <climits>
 
 /// @brief Gzip decompressor implementation using zlib.
 ///
 /// This class uses zlib's inflate() API in gzip mode (inflateInit2 with
-/// 16 + MAX_WBITS) to decompress a complete gzip stream in a single call.
+/// 16 + MAX_WBITS) over the in-memory input. The output size is never
+/// estimated, so highly compressible data works as well as any other.
 ///
 /// Strategy:
-///  - Start with an output buffer sized as a heuristic multiple of the
-///    compressed size.
-///  - Call inflate() with Z_FINISH.
-///  - If the buffer is too small (Z_BUF_ERROR or Z_OK without Z_STREAM_END),
-///    reallocate a larger buffer and retry once from scratch.
-///  - Treat any other inflate() return code as an unrecoverable error.
+///  - Call inflate() into the output vector, doubling it whenever it is full.
+///  - After Z_STREAM_END, if input remains, reset the stream and continue
+///    with the next gzip member (concatenated members, like gunzip).
+///  - Treat truncated input, corrupt data, trailing bytes that are not a gzip
+///    member and any call that makes no progress as errors.
 ///
 /// Empty input is treated as a successful no-op and produces an empty output.
 class GzipDecompressor : public Decompressor {
@@ -23,75 +24,63 @@ public:
     /// @copydoc Decompressor::decompress()
     bool decompress(const std::vector<std::uint8_t>& input, std::vector<std::uint8_t>& output) override
     {
+        output.clear();
         if (input.empty()) {
-            output.clear();
             return true;
         }
 
-        // Initial guess for output size. We will grow the buffer if needed.
-        std::size_t out_capacity = input.size() * 4 + 1024;
-        if (out_capacity == 0) {
-            out_capacity = 1024;
-        }
-
-        output.clear();
-        output.resize(out_capacity);
-
         z_stream strm{};
-        strm.zalloc = Z_NULL;
-        strm.zfree  = Z_NULL;
-        strm.opaque = Z_NULL;
-        strm.next_in = const_cast<Bytef*>(reinterpret_cast<const Bytef*>(input.data()));
-        strm.avail_in = static_cast<uInt>(input.size());
-
-        // 16 + MAX_WBITS enables gzip decoding with automatic header detection.
-        int ret = inflateInit2(&strm, 16 + MAX_WBITS);
-        if (ret != Z_OK) {
-            output.clear();
+        if (inflateInit2(&strm, 16 + MAX_WBITS) != Z_OK) {
             return false;
         }
 
+        std::size_t in_pos = 0;   // bytes handed to zlib so far
+        std::size_t out_pos = 0;  // bytes produced so far
         bool ok = false;
 
-        for (int attempt = 0; attempt < 2 && !ok; ++attempt) {
-            strm.next_out  = reinterpret_cast<Bytef*>(output.data());
-            strm.avail_out = static_cast<uInt>(output.size());
+        for (;;) {
+            if (strm.avail_in == 0 && in_pos < input.size()) {
+                const std::size_t chunk = std::min<std::size_t>(input.size() - in_pos, UINT_MAX);
+                strm.next_in = const_cast<Bytef*>(input.data() + in_pos);
+                strm.avail_in = static_cast<uInt>(chunk);
+                in_pos += chunk;
+            }
+            if (out_pos == output.size() && !decompressor_detail::grow(output)) {
+                break;
+            }
 
-            ret = inflate(&strm, Z_FINISH);
+            const std::size_t out_room = std::min<std::size_t>(output.size() - out_pos, UINT_MAX);
+            const uInt in_before = strm.avail_in;
+            strm.next_out = output.data() + out_pos;
+            strm.avail_out = static_cast<uInt>(out_room);
+
+            const int ret = inflate(&strm, Z_NO_FLUSH);
+            const std::size_t produced = out_room - strm.avail_out;
+            out_pos += produced;
 
             if (ret == Z_STREAM_END) {
-                // Decompression completed.
-                std::size_t produced = output.size() - strm.avail_out;
-                output.resize(produced);
-                ok = true;
-            } else if (ret == Z_BUF_ERROR || ret == Z_OK) {
-                // Output buffer too small; try to grow and retry once from scratch.
-                output.resize(output.size() * 2);
-                // Reset stream to initial state and try again.
-                inflateEnd(&strm);
-                strm.zalloc = Z_NULL;
-                strm.zfree  = Z_NULL;
-                strm.opaque = Z_NULL;
-                strm.next_in = const_cast<Bytef*>(reinterpret_cast<const Bytef*>(input.data()));
-                strm.avail_in = static_cast<uInt>(input.size());
-                ret = inflateInit2(&strm, 16 + MAX_WBITS);
-                if (ret != Z_OK) {
-                    output.clear();
-                    return false;
+                if (strm.avail_in == 0 && in_pos == input.size()) {
+                    ok = true;
+                    break;
                 }
-            } else {
-                // Any other error is fatal.
-                output.clear();
-                inflateEnd(&strm);
-                return false;
+                if (inflateReset(&strm) != Z_OK) {
+                    break;
+                }
+                continue;
+            }
+            // Z_BUF_ERROR (no progress possible, e.g. truncated input) and
+            // every other code are failures; Z_OK must have made progress.
+            if (ret != Z_OK || (produced == 0 && strm.avail_in == in_before)) {
+                break;
             }
         }
 
         inflateEnd(&strm);
         if (!ok) {
             output.clear();
+            return false;
         }
-
-        return ok;
+        output.resize(out_pos);
+        return true;
     }
 };

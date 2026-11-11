@@ -238,6 +238,11 @@ diff -u ref_bzip2.txt out_bzip2.txt
 meson test -C builddir --print-errorlogs
 ```
 
+This runs two tests: `zstddec_unit_tests` (GoogleTest, the decompressors and the factory)
+and `zstddec_pipelines` (real `gst-launch-1.0` pipelines through the built plugin, for
+all three formats, including corrupt and truncated input). The second one is skipped
+if `gst-launch-1.0`, `zstd`, `gzip` or `bzip2` are not installed.
+
 ---
 
 ## Generating Documentation (Doxygen)
@@ -258,7 +263,7 @@ doxygen Doxyfile
 Output:
 
 ```
-docs/doxygen/html/index.html
+docs/html/index.html
 ```
 
 ---

@@ -96,9 +96,9 @@ Libraries used:
 - bzip2 → `libbz2`
 
 Each provides:
-- one-shot buffer-to-buffer decompression,
+- one-shot decompression of the whole in-memory input (incremental library API),
 - safe return semantics (`true`/`false`, not exceptions),
-- internal buffer resizing if required.
+- an output buffer that grows as needed (no size estimation).
 
 ### 3.4 `DecompressorFactory`
 

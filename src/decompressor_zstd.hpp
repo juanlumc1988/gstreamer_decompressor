@@ -1,65 +1,70 @@
+#pragma once
+
 #include "decompressor.hpp"
 
 #include <zstd.h>
-#include <cstring>
 
 /// @brief Zstandard decompressor implementation.
 ///
-/// This class uses the libzstd API to decompress a complete Zstandard frame.
-/// It first tries to query the uncompressed size from the frame header using
-/// ZSTD_getFrameContentSize(). If that fails (unknown or error), it falls
-/// back to a heuristic based on the compressed size.
+/// This class uses libzstd's streaming API (ZSTD_decompressStream()) over the
+/// in-memory input. The output size is never estimated, so it works the same
+/// for frames that declare their content size and for frames that do not
+/// (e.g. data compressed from a pipe), whatever the compression ratio.
+///
+/// Strategy:
+///  - Decompress into the output vector, doubling it whenever it is full.
+///  - After a frame is completely decoded and flushed, continue with the next
+///    frame until all the input is consumed (concatenated frames).
 ///
 /// Error handling strategy:
 ///  - If the input buffer is empty, the method succeeds and clears the output.
-///  - If libzstd reports an error, the method clears the output and returns false.
-///  - On success, the output vector is resized to the exact number of bytes
-///    produced by ZSTD_decompress().
+///  - If libzstd reports an error, the input is truncated (the last frame is
+///    incomplete) or memory runs out, the method clears the output and
+///    returns false.
 class ZstdDecompressor : public Decompressor {
 public:
     /// @copydoc Decompressor::decompress()
     bool decompress(const std::vector<std::uint8_t>& input, std::vector<std::uint8_t>& output) override
     {
+        output.clear();
         if (input.empty()) {
-            output.clear();
             return true;
         }
 
-        /* Ask zstd for the expected decompressed size if available. */
-        unsigned long long const content_size = ZSTD_getFrameContentSize(input.data(), input.size());
-
-        size_t out_capacity = 0;
-
-        if (content_size != ZSTD_CONTENTSIZE_ERROR && content_size != ZSTD_CONTENTSIZE_UNKNOWN) {
-            out_capacity = static_cast<size_t>(content_size);
-        } else {
-            /* Fallback heuristic when size is unknown:
-             * This is a simple trade-off between memory usage and
-             * not failing for moderately compressed streams.
-             */
-            out_capacity = input.size() * 4 + 1024;
-        }
-
-        if (out_capacity == 0) {
-            output.clear();
-            return true;
-        }
-
-        output.resize(out_capacity);
-
-        size_t const decompressed_size = ZSTD_decompress(output.data(), out_capacity, input.data(), input.size());
-        if (ZSTD_isError(decompressed_size)) {
-            output.clear();
+        std::unique_ptr<ZSTD_DCtx, decltype(&ZSTD_freeDCtx)> dctx(ZSTD_createDCtx(), &ZSTD_freeDCtx);
+        if (!dctx) {
             return false;
         }
 
-        if (decompressed_size > out_capacity) {
-            // Should not happen, but guard against it.
-            output.clear();
-            return false;
+        ZSTD_inBuffer in{input.data(), input.size(), 0};
+        std::size_t out_pos = 0;
+
+        for (;;) {
+            if (out_pos == output.size() && !decompressor_detail::grow(output)) {
+                break;
+            }
+
+            ZSTD_outBuffer out{output.data(), output.size(), out_pos};
+            // 0 means: current frame completely decoded and flushed.
+            const std::size_t ret = ZSTD_decompressStream(dctx.get(), &out, &in);
+            if (ZSTD_isError(ret)) {
+                break;
+            }
+            out_pos = out.pos;
+
+            const bool input_done = (in.pos == in.size);
+            if (ret == 0 && input_done) {
+                output.resize(out_pos);
+                return true;
+            }
+            // Input exhausted, frame not finished and the output has room:
+            // nothing more can be produced, the input is truncated.
+            if (input_done && out_pos < output.size()) {
+                break;
+            }
         }
 
-        output.resize(decompressed_size);
-        return true;
+        output.clear();
+        return false;
     }
 };

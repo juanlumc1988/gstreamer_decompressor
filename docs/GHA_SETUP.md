@@ -73,14 +73,15 @@ Checks out the repository so the following steps can operate on the code.
 - name: Install system dependencies
   run: |
     sudo apt-get update
-    sudo apt-get install -y       build-essential       meson       ninja-build       pkg-config       libunwind-dev       libgstreamer1.0-dev       gstreamer1.0-tools       libzstd-dev       zlib1g-dev       libbz2-dev       libgtest-dev       cmake
+    sudo apt-get install -y       build-essential       meson       ninja-build       pkg-config       libunwind-dev       libgstreamer1.0-dev       gstreamer1.0-tools       libzstd-dev       zstd       zlib1g-dev       libbz2-dev       libgtest-dev       cmake
 ```
 
 Key packages:
 
 - Build tools: `build-essential`, `meson`, `ninja-build`, `pkg-config`, `cmake`
 - GStreamer: `libgstreamer1.0-dev`, `gstreamer1.0-tools`, `libunwind-dev`
-- Compression libs: `libzstd-dev`, `zlib1g-dev`, `libbz2-dev`
+- Compression libs: `libzstd-dev`, `zlib1g-dev`, `libbz2-dev`; CLI `zstd` (used by the
+  end-to-end pipeline test)
 - Google Test: `libgtest-dev` (source only)
 
 ### 5.3 Building and Installing Google Test
@@ -133,7 +134,8 @@ Rationale:
     meson test -C builddir --print-errorlogs
 ```
 
-- Runs the tests defined under `tests/meson.build`.
+- Runs the tests defined under `tests/meson.build`: the GoogleTest unit tests and the
+  end-to-end `gst-launch-1.0` pipeline test (`tests/pipeline_test.sh`).
 - Fails the job if any test fails.
 - Prints test error logs for debugging.
 

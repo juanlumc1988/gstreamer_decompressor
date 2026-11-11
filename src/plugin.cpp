@@ -37,7 +37,7 @@ GST_PLUGIN_DEFINE(
     zstddec,                                   // plugin name
     "Zstandard/gzip/bzip2 decoder plugin",     // description
     plugin_init,                               // init function
-    "0.1.0",                                   // version
+    "1.0.0",                                   // version
     "LGPL",                                    // license
     PACKAGE,                                   // package name / module
     "https://example.com/"                     // origin (placeholder)
